@@ -1,0 +1,16 @@
+{
+    "name": "Menú Minimalista",
+    "short_name": "Menú",
+    "description": "Aplicación de recetas basada en tu despensa",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#FAFAFA",
+    "theme_color": "#FAFAFA",
+    "icons": [
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/184/184539.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

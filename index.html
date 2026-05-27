@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Minimalista</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FAFAFA">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #FAFAFA; --card-bg: #FFFFFF; --text-main: #2C2C2C;
+            --text-muted: #757575; --accent-border: #EAEAEA; --btn-accent: #1A1A1A;
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; }
+        h1, h2, h3 { font-family: 'Playfair Display', serif; font-weight: 600; margin-top: 0; }
+        header { text-align: center; padding: 3rem 1rem 2rem; border-bottom: 1px solid var(--accent-border); background-color: var(--card-bg); }
+        header h1 { font-size: 2.2rem; letter-spacing: -0.5px; margin-bottom: 0.5rem;}
+        header p { color: var(--text-muted); font-weight: 300; }
+
+        .container { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; display: grid; grid-template-columns: 300px 1fr; gap: 3rem; }
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+
+        /* Despensa */
+        .pantry-section { background-color: var(--card-bg); padding: 2rem; border-radius: 12px; border: 1px solid var(--accent-border); position: sticky; top: 2rem; }
+        .pantry-input-group { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+        input[type="text"] { flex: 1; padding: 0.75rem; border: 1px solid var(--accent-border); border-radius: 6px; font-family: 'Inter', sans-serif; outline: none; }
+        button { padding: 0.75rem 1.2rem; background-color: var(--btn-accent); color: white; border: none; border-radius: 6px; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; }
+        .search-btn { width: 100%; margin-top: 1.5rem; background-color: #2b2b2b; padding: 1rem; }
+        
+        .pantry-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
+        .pantry-list li { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--accent-border); font-weight: 300; text-transform: capitalize;}
+        .delete-btn { background: none; color: var(--text-muted); padding: 0; }
+
+        /* Recetas */
+        .recipes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
+        .recipe-card { background-color: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--accent-border); cursor: pointer; transition: transform 0.2s; }
+        .recipe-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.04); }
+        .recipe-image { width: 100%; height: 200px; object-fit: cover; }
+        .recipe-content { padding: 1.5rem; }
+        .loader { display: none; text-align: center; padding: 3rem; color: var(--text-muted); grid-column: 1 / -1; }
+
+        /* Modal (Ventana Emergente de la Receta) */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: var(--card-bg); width: 90%; max-width: 600px; max-height: 85vh;
+            border-radius: 12px; overflow-y: auto; position: relative; padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .close-modal {
+            position: absolute; top: 1rem; right: 1.5rem; background: none; color: var(--text-main);
+            font-size: 1.5rem; padding: 0;
+        }
+        .modal-img { width: 100%; height: 250px; object-fit: cover; border-radius: 8px; margin-bottom: 1.5rem; }
+        .modal-body h3 { font-size: 1.5rem; margin-top: 1.5rem; border-bottom: 1px solid var(--accent-border); padding-bottom: 0.5rem; }
+        .modal-body ul { padding-left: 1.5rem; color: var(--text-muted); line-height: 1.6; }
+        .modal-body p { color: var(--text-muted); line-height: 1.8; font-weight: 300; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Recetas al Instante</h1>
+        <p>Tu menú basado en lo que hay en casa.</p>
+    </header>
+
+    <main class="container">
+        <aside class="pantry-section">
+            <h2>Mi Despensa</h2>
+            <div class="pantry-input-group">
+                <input type="text" id="pantry-input" placeholder="Ej. pollo, papa, tomate...">
+                <button id="add-btn">+</button>
+            </div>
+            <ul class="pantry-list" id="pantry-list"></ul>
+            <button class="search-btn" id="generate-btn">Generar Recetas</button>
+        </aside>
+
+        <section>
+            <h2 style="margin-bottom: 1.5rem;">Opciones para hoy</h2>
+            <div id="loader" class="loader">Buscando recetas...</div>
+            <div class="recipes-grid" id="recipes-grid"></div>
+        </section>
+    </main>
+
+    <div class="modal-overlay" id="recipe-modal">
+        <div class="modal-content">
+            <button class="close-modal" id="close-modal">✕</button>
+            <div id="modal-loader" style="text-align:center; padding: 2rem; display:none;">Cargando receta...</div>
+            <div id="modal-details">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        // === REGISTRO DEL SERVICE WORKER (Para que sea una App instalable) ===
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(() => {
+                console.log('Service Worker Registrado');
+            });
+        }
+
+        const pantryInput = document.getElementById('pantry-input');
+        const addBtn = document.getElementById('add-btn');
+        const generateBtn = document.getElementById('generate-btn');
+        const pantryList = document.getElementById('pantry-list');
+        const recipesGrid = document.getElementById('recipes-grid');
+        const loader = document.getElementById('loader');
+        
+        // Elementos del modal
+        const modal = document.getElementById('recipe-modal');
+        const closeModal = document.getElementById('close-modal');
+        const modalDetails = document.getElementById('modal-details');
+        const modalLoader = document.getElementById('modal-loader');
+
+        let ingredientes = JSON.parse(localStorage.getItem('miDespensa')) || ['pollo', 'arroz', 'cebolla'];
+
+        const traductor = { 'pollo': 'chicken', 'carne': 'beef', 'cerdo': 'pork', 'pescado': 'fish', 'queso': 'cheese', 'papa': 'potato', 'tomate': 'tomato', 'cebolla': 'onion', 'arroz': 'rice', 'pasta': 'pasta', 'huevo': 'egg', 'leche': 'milk' };
+
+        function renderizarDespensa() {
+            pantryList.innerHTML = '';
+            ingredientes.forEach((item, index) => {
+                pantryList.innerHTML += `<li><span>${item}</span><button class="delete-btn" onclick="eliminarIngrediente(${index})">✕</button></li>`;
+            });
+            localStorage.setItem('miDespensa', JSON.stringify(ingredientes));
+        }
+
+        function agregarIngrediente() {
+            const val = pantryInput.value.trim().toLowerCase();
+            if (val !== '' && !ingredientes.includes(val)) {
+                ingredientes.push(val); pantryInput.value = ''; renderizarDespensa();
+            }
+        }
+
+        window.eliminarIngrediente = function(index) { ingredientes.splice(index, 1); renderizarDespensa(); }
+
+        async function generarRecetas() {
+            if (ingredientes.length === 0) return;
+            recipesGrid.innerHTML = ''; loader.style.display = 'block';
+
+            const ingBase = ingredientes[0].toLowerCase();
+            const query = traductor[ingBase] || ingBase;
+
+            try {
+                const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${query}`);
+                const data = await res.json();
+                loader.style.display = 'none';
+
+                if (!data.meals) {
+                    recipesGrid.innerHTML = '<p style="grid-column: 1/-1;">No encontramos recetas. Intenta con un ingrediente más general.</p>'; return;
+                }
+
+                data.meals.slice(0, 12).forEach(meal => {
+                    recipesGrid.innerHTML += `
+                        <div class="recipe-card" onclick="abrirReceta('${meal.idMeal}')">
+                            <img src="${meal.strMealThumb}/preview" alt="${meal.strMeal}" class="recipe-image" loading="lazy">
+                            <div class="recipe-content">
+                                <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">${meal.strMeal}</h3>
+                                <p style="font-size: 0.85rem; color: #757575;">Toca para preparar</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (err) { loader.style.display = 'none'; recipesGrid.innerHTML = '<p>Error de conexión.</p>'; }
+        }
+
+        // Lógica para abrir la receta dentro de la app
+        async function abrirReceta(idMeal) {
+            modal.style.display = 'flex';
+            modalDetails.innerHTML = '';
+            modalLoader.style.display = 'block';
+
+            try {
+                const res = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${idMeal}`);
+                const data = await res.json();
+                const receta = data.meals[0];
+                
+                modalLoader.style.display = 'none';
+
+                // Extraer ingredientes (TheMealDB los separa en 20 campos diferentes)
+                let listaIngredientes = '<ul>';
+                for(let i = 1; i <= 20; i++) {
+                    if(receta[`strIngredient${i}`] && receta[`strIngredient${i}`].trim() !== "") {
+                        listaIngredientes += `<li>${receta[`strMeasure${i}`]} ${receta[`strIngredient${i}`]}</li>`;
+                    }
+                }
+                listaIngredientes += '</ul>';
+
+                // Formatear las instrucciones para que tengan saltos de línea
+                const instruccionesFormateadas = receta.strInstructions.replace(/\r\n/g, '<br><br>');
+
+                modalDetails.innerHTML = `
+                    <h2 style="font-family: 'Playfair Display', serif; font-size: 2rem; margin-bottom: 1rem;">${receta.strMeal}</h2>
+                    <img src="${receta.strMealThumb}" class="modal-img">
+                    <div class="modal-body">
+                        <h3>Ingredientes Exactos</h3>
+                        ${listaIngredientes}
+                        <h3>Preparación</h3>
+                        <p>${instruccionesFormateadas}</p>
+                    </div>
+                `;
+            } catch (err) {
+                modalLoader.style.display = 'none';
+                modalDetails.innerHTML = '<p>No se pudo cargar la receta detallada.</p>';
+            }
+        }
+
+        // Cerrar modal
+        closeModal.onclick = () => modal.style.display = 'none';
+        window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; }
+
+        addBtn.addEventListener('click', agregarIngrediente);
+        pantryInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') agregarIngrediente(); });
+        generateBtn.addEventListener('click', generarRecetas);
+
+        renderizarDespensa();
+    </script>
+</body>
+</html>
